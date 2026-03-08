@@ -332,11 +332,8 @@
            (when-not lines (print-uncovered uncovered))
            (save-backup! source-path analysis-content)
             (try
-              (let [run-fn (if (project/bb-project?)
-                             run-mutations-serial
-                             run-mutations-parallel)
-                    results (run-fn sites source-path
-                                    analysis-content timeout-ms)
+               (let [results (run-mutations-parallel sites source-path
+                                                      analysis-content timeout-ms)
                    killed (count (filter #(= :killed (:result %)) results))
                    total (count results)
                    pct (if (zero? total) 0.0 (* 100.0 (/ killed total)))
