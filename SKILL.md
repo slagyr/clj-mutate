@@ -45,13 +45,14 @@ Add `mutate` and `spec` tasks to your project's `bb.edn`:
         org.clojure/tools.reader {:mvn/version "1.4.2"}
         speclj/speclj {:mvn/version "3.12.1"}}
  :tasks {spec {:doc "Run all specs"
-               :task (exec 'speclj.main)
-               :exec-args ["-c"]}
+               :requires ([speclj.cli :as speclj])
+               :task (System/exit (speclj/run "-c"))}
          mutate {:doc "Run mutation testing"
-                 :task (apply clojure.core/-main
-                              (exec 'clj-mutate.core)
-                              *command-line-args*)}}}
+                 :requires ([clj-mutate.core :as mutate])
+                 :task (apply mutate/-main *command-line-args*)}}}
 ```
+
+**Important: the `spec` task must propagate the exit code.** clj-mutate detects killed mutants by checking whether `bb spec` exits non-zero. Babashka's task runner intercepts `System/exit` calls from libraries, so `speclj.main/-main` (which calls `System/exit` internally) will NOT propagate the failure exit code — bb always exits 0. The fix is to call `speclj.cli/run` (which returns the failure count as an integer) and pass it to `System/exit` explicitly.
 
 Requires a `spec` task that runs all specs. Cloverage is not available under babashka; coverage-guided filtering is skipped (all lines are mutation-tested). If an `lcov.info` file is present from an external source, it will be used.
 
@@ -123,3 +124,4 @@ Known-equivalent mutations are auto-suppressed to reduce false survivors:
 - **Specs fail at baseline**: Fix your specs before mutation testing
 - **Chasing equivalent mutations**: Some survivors are mathematically equivalent; suppress them rather than writing impossible tests
 - **Missing coverage in bb projects**: Cloverage is JVM-only. Babashka projects test all lines by default, which is slower but thorough
+- **All mutants survive in bb projects**: The `spec` task must call `(System/exit (speclj.cli/run "-c"))`, not `(speclj.main/-main "-c")`. Babashka intercepts `System/exit` from library code, so `-main`'s internal exit call is swallowed and bb always exits 0. clj-mutate relies on exit codes to detect killed mutants.
