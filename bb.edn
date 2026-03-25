@@ -2,7 +2,8 @@
  :deps {org.clojure/tools.reader {:mvn/version "1.4.2"}
         speclj/speclj {:mvn/version "3.12.1"}}
  :tasks {spec {:doc "Run specs"
-               :task (do (require 'speclj.main)
-                         ((resolve 'speclj.main/-main) "-c"))}
+               :requires ([speclj.cli :as speclj])
+               :task (System/exit (speclj/run "-c"))}
          mutate {:doc "Run mutation testing"
-                 :task (apply (requiring-resolve 'clj-mutate.core/-main) *command-line-args*)}}}
+                 :requires ([clj-mutate.core :as mutate])
+                 :task (apply mutate/-main *command-line-args*)}}}
